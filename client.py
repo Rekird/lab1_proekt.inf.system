@@ -14,19 +14,14 @@ class ClientShort:
 
 class Client:
     def __init__(self, *args):
-        if len(args) == 1 and isinstance(args[0], str):
+        if len(args) == 1 and isinstance(args[0], dict):
+            self._init_from_dict(args[0])
+        elif len(args) == 1 and isinstance(args[0], str):
             data_string = args[0].strip()
 
             if data_string.startswith("{"):
                 try:
-                    data = json.loads(data_string)
-                    self.client_id = data["client_id"]
-                    self.last_name = data["last_name"]
-                    self.first_name = data["first_name"]
-                    self.passport_data = data["passport_data"]
-                    self.phone_number = data["phone_number"]
-                except KeyError as e:
-                    raise ValueError(f"В JSON отсутствует поле: {e}")
+                    self._init_from_dict(json.loads(data_string))
                 except json.JSONDecodeError:
                     raise ValueError("Передана некорректная JSON-строка.")
 
@@ -51,8 +46,19 @@ class Client:
 
         else:
             raise ValueError(
-                "Неверное количество аргументов. Ожидается либо 1 строка, либо 5 параметров."
+                "Неверное количество аргументов. Ожидается словарь, "
+                "одна строка либо 5 параметров."
             )
+
+    def _init_from_dict(self, data: dict):
+        try:
+            self.client_id = data["client_id"]
+            self.last_name = data["last_name"]
+            self.first_name = data["first_name"]
+            self.passport_data = data["passport_data"]
+            self.phone_number = data["phone_number"]
+        except KeyError as e:
+            raise ValueError(f"В данных отсутствует поле: {e}") from e
 
     @staticmethod
     def _validate_string(value: str, field_name: str) -> str:
@@ -94,7 +100,7 @@ class Client:
 
     @staticmethod
     def _validate_client_id(value: int) -> int:
-        if not isinstance(value, int) or value <= 0:
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
             raise ValueError("ID клиента должен быть положительным целым числом.")
         return value
 
@@ -149,10 +155,15 @@ class Client:
             return False
         return self.passport_data == other.passport_data
 
+    def __hash__(self) -> int:
+        # Согласовано с __eq__: равенство определяется по паспортным данным,
+        # поэтому и хэш считается по ним.
+        return hash(self.passport_data)
+
 
 class ClientMapper:
     @staticmethod
-    def short_version(client) -> ClientShort:
+    def short_version(client: Client) -> ClientShort:
         return ClientShort(
             client.last_name, f"{client.first_name[0]}.", client.phone_number
         )
@@ -175,11 +186,7 @@ if __name__ == "__main__":
 
     client3 = Client(6, "ASSD", "asdsf", "1564 984695", "(996) 123-45-67")
     full_clients = [client1, client_json, client_csv]
-    clientsShorts = [
-        ClientMapper.short_version(client1),
-        ClientMapper.short_version(client_json),
-        ClientMapper.short_version(client_csv),
-    ]
+    client_shorts = [ClientMapper.short_version(client) for client in full_clients]
 
-    for i in clientsShorts:
-        print(i)
+    for short_client in client_shorts:
+        print(short_client)

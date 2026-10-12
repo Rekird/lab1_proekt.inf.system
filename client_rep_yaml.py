@@ -1,5 +1,7 @@
-import yaml
 import os
+
+import yaml
+
 from client import Client
 from repository_base import ClientRepositoryBase
 
@@ -14,29 +16,22 @@ class Client_rep_yaml(ClientRepositoryBase):
         if not os.path.exists(self.file_path):
             self.clients = []
             return
-        with open(self.file_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or []
-            self.clients = [
-                Client(
-                    item["client_id"],
-                    item["last_name"],
-                    item["first_name"],
-                    item["passport_data"],
-                    item["phone_number"],
-                )
-                for item in data
-            ]
+        with open(self.file_path, "r", encoding="utf-8") as file:
+            data = yaml.safe_load(file) or []
+            if not isinstance(data, list):
+                raise ValueError("YAML-файл должен содержать список объектов клиентов.")
+            self.clients = [Client(item) for item in data]
 
     def write_to_file(self):
-        with open(self.file_path, "w", encoding="utf-8") as f:
+        with open(self.file_path, "w", encoding="utf-8") as file:
             data = [
                 {
-                    "client_id": c.client_id,
-                    "last_name": c.last_name,
-                    "first_name": c.first_name,
-                    "passport_data": c.passport_data,
-                    "phone_number": c.phone_number,
+                    "client_id": client.client_id,
+                    "last_name": client.last_name,
+                    "first_name": client.first_name,
+                    "passport_data": client.passport_data,
+                    "phone_number": client.phone_number,
                 }
-                for c in self.clients
+                for client in self.clients
             ]
-            yaml.dump(data, f, allow_unicode=True, sort_keys=False)
+            yaml.dump(data, file, allow_unicode=True, sort_keys=False)

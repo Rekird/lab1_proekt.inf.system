@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.pyo
+test_data.json
+test_data.yaml
+.venv/
+venv/
+.env

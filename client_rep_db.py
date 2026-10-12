@@ -1,5 +1,6 @@
-from db_connection import DBConnection
 from client import Client, ClientMapper
+from db_connection import DBConnection
+from repository_base import ClientRepositoryBase
 
 
 class Client_rep_DB:
@@ -9,7 +10,8 @@ class Client_rep_DB:
     def get_by_id(self, client_id: int) -> Client:
         with self.db_manager.get_connection().cursor() as cursor:
             cursor.execute(
-                "SELECT id, last_name, first_name, passport_data, phone_number FROM clients WHERE id = %s;",
+                "SELECT id, last_name, first_name, passport_data, phone_number "
+                "FROM clients WHERE id = %s;",
                 (client_id,),
             )
             row = cursor.fetchone()
@@ -17,7 +19,17 @@ class Client_rep_DB:
                 raise ValueError(f"Клиент с ID {client_id} не найден.")
             return Client(row[0], row[1], row[2], row[3], row[4])
 
+    def get_all(self) -> list:
+        with self.db_manager.get_connection().cursor() as cursor:
+            cursor.execute(
+                "SELECT id, last_name, first_name, passport_data, phone_number "
+                "FROM clients ORDER BY id;"
+            )
+            rows = cursor.fetchall()
+            return [Client(row[0], row[1], row[2], row[3], row[4]) for row in rows]
+
     def get_k_n_short_list(self, k: int, n: int) -> list:
+        ClientRepositoryBase._validate_page(k, n)
         with self.db_manager.get_connection().cursor() as cursor:
             offset = (n - 1) * k
             cursor.execute(
@@ -26,8 +38,8 @@ class Client_rep_DB:
                 (k, offset),
             )
             rows = cursor.fetchall()
-            clients = [Client(r[0], r[1], r[2], r[3], r[4]) for r in rows]
-            return [ClientMapper.short_version(c) for c in clients]
+            clients = [Client(row[0], row[1], row[2], row[3], row[4]) for row in rows]
+            return [ClientMapper.short_version(client) for client in clients]
 
     def add(self, client: Client):
         with self.db_manager.get_connection().cursor() as cursor:
@@ -35,7 +47,7 @@ class Client_rep_DB:
                 """
                 INSERT INTO clients (last_name, first_name, passport_data, phone_number)
                 VALUES (%s, %s, %s, %s) RETURNING id;
-            """,
+                """,
                 (
                     client.last_name,
                     client.first_name,
@@ -49,8 +61,10 @@ class Client_rep_DB:
         with self.db_manager.get_connection().cursor() as cursor:
             cursor.execute(
                 """
-                UPDATE clients SET last_name = %s, first_name = %s, passport_data = %s, phone_number = %s WHERE id = %s;
-            """,
+                UPDATE clients
+                SET last_name = %s, first_name = %s, passport_data = %s, phone_number = %s
+                WHERE id = %s;
+                """,
                 (
                     new_client.last_name,
                     new_client.first_name,
