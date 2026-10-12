@@ -3,10 +3,10 @@ import os
 import yaml
 
 from client import Client
-from repository_base import ClientRepositoryBase
+from repository_base import FileRepositoryBase
 
 
-class Client_rep_yaml(ClientRepositoryBase):
+class Client_rep_yaml(FileRepositoryBase):
     def __init__(self, file_path: str):
         super().__init__()
         self.file_path = file_path
@@ -19,7 +19,9 @@ class Client_rep_yaml(ClientRepositoryBase):
         with open(self.file_path, "r", encoding="utf-8") as file:
             data = yaml.safe_load(file) or []
             if not isinstance(data, list):
-                raise ValueError("YAML-файл должен содержать список объектов клиентов.")
+                raise ValueError(
+                    "YAML-файл должен содержать список объектов клиентов."
+                )
             self.clients = [Client(item) for item in data]
 
     def write_to_file(self):

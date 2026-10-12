@@ -4,17 +4,10 @@ from repository_base import ClientRepositoryBase
 
 
 class Client_rep_DB_Adapter(ClientRepositoryBase):
-    """Встраивает Client_rep_DB в общую иерархию ClientRepositoryBase."""
+    """Делегирует CRUD-операции в Client_rep_DB."""
 
     def __init__(self, db_repository: Client_rep_DB):
-        super().__init__()
         self.adaptee = db_repository
-
-    def read_from_file(self):
-        raise NotImplementedError("Чтение из файла не применимо к репозиторию БД.")
-
-    def write_to_file(self):
-        raise NotImplementedError("Запись в файл не применима к репозиторию БД.")
 
     def get_all(self) -> list:
         return self.adaptee.get_all()
@@ -25,11 +18,22 @@ class Client_rep_DB_Adapter(ClientRepositoryBase):
     def get_k_n_short_list(self, k: int, n: int) -> list:
         return self.adaptee.get_k_n_short_list(k, n)
 
-    def sort_by_last_name(self):
-        raise NotImplementedError(
-            "Сортировка списка в памяти не применима к репозиторию БД. "
-            "Используйте декоратор с параметром sort_by."
+    def get_page_short(
+        self,
+        k: int,
+        n: int,
+        where_sql: str = "",
+        where_params: tuple = (),
+        order_sql: str = "",
+    ) -> list:
+        return self.adaptee.get_page_short(
+            k, n, where_sql, where_params, order_sql
         )
+
+    def get_filtered_count(
+        self, where_sql: str = "", where_params: tuple = ()
+    ) -> int:
+        return self.adaptee.get_filtered_count(where_sql, where_params)
 
     def add(self, client: Client):
         self.adaptee.add(client)

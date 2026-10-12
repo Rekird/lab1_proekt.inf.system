@@ -26,26 +26,70 @@ class Client_rep_DB:
                 "FROM clients ORDER BY id;"
             )
             rows = cursor.fetchall()
-            return [Client(row[0], row[1], row[2], row[3], row[4]) for row in rows]
+            return [
+                Client(row[0], row[1], row[2], row[3], row[4])
+                for row in rows
+            ]
 
     def get_k_n_short_list(self, k: int, n: int) -> list:
         ClientRepositoryBase._validate_page(k, n)
+        offset = (n - 1) * k
         with self.db_manager.get_connection().cursor() as cursor:
-            offset = (n - 1) * k
             cursor.execute(
                 "SELECT id, last_name, first_name, passport_data, phone_number "
                 "FROM clients ORDER BY id LIMIT %s OFFSET %s;",
                 (k, offset),
             )
             rows = cursor.fetchall()
-            clients = [Client(row[0], row[1], row[2], row[3], row[4]) for row in rows]
+            clients = [
+                Client(row[0], row[1], row[2], row[3], row[4])
+                for row in rows
+            ]
             return [ClientMapper.short_version(client) for client in clients]
+
+    def get_page_short(
+        self,
+        k: int,
+        n: int,
+        where_sql: str = "",
+        where_params: tuple = (),
+        order_sql: str = "",
+    ) -> list:
+        """Постраничная выдача ClientShort с опциональным WHERE/ORDER BY."""
+        ClientRepositoryBase._validate_page(k, n)
+        offset = (n - 1) * k
+        sql = (
+            "SELECT id, last_name, first_name, passport_data, phone_number "
+            "FROM clients "
+            f"{where_sql} "
+            f"{order_sql} "
+            "LIMIT %s OFFSET %s;"
+        )
+        params = tuple(where_params) + (k, offset)
+        with self.db_manager.get_connection().cursor() as cursor:
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            clients = [
+                Client(row[0], row[1], row[2], row[3], row[4])
+                for row in rows
+            ]
+            return [ClientMapper.short_version(client) for client in clients]
+
+    def get_filtered_count(
+        self, where_sql: str = "", where_params: tuple = ()
+    ) -> int:
+        """COUNT(*) с опциональным WHERE."""
+        sql = "SELECT COUNT(*) FROM clients " f"{where_sql};"
+        with self.db_manager.get_connection().cursor() as cursor:
+            cursor.execute(sql, tuple(where_params))
+            return cursor.fetchone()[0]
 
     def add(self, client: Client):
         with self.db_manager.get_connection().cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO clients (last_name, first_name, passport_data, phone_number)
+                INSERT INTO clients
+                    (last_name, first_name, passport_data, phone_number)
                 VALUES (%s, %s, %s, %s) RETURNING id;
                 """,
                 (
@@ -62,7 +106,10 @@ class Client_rep_DB:
             cursor.execute(
                 """
                 UPDATE clients
-                SET last_name = %s, first_name = %s, passport_data = %s, phone_number = %s
+                SET last_name = %s,
+                    first_name = %s,
+                    passport_data = %s,
+                    phone_number = %s
                 WHERE id = %s;
                 """,
                 (

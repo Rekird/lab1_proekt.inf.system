@@ -2,10 +2,10 @@ import json
 import os
 
 from client import Client
-from repository_base import ClientRepositoryBase
+from repository_base import FileRepositoryBase
 
 
-class Client_rep_json(ClientRepositoryBase):
+class Client_rep_json(FileRepositoryBase):
     def __init__(self, file_path: str):
         super().__init__()
         self.file_path = file_path
@@ -22,7 +22,9 @@ class Client_rep_json(ClientRepositoryBase):
                 return
             data = json.loads(content)
             if not isinstance(data, list):
-                raise ValueError("JSON-файл должен содержать список объектов клиентов.")
+                raise ValueError(
+                    "JSON-файл должен содержать список объектов клиентов."
+                )
             self.clients = [Client(item) for item in data]
 
     def write_to_file(self):
