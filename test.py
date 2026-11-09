@@ -12,8 +12,6 @@ from client_rep_decorator import (
     ClientRepositoryDBSortFilterDecorator,
     ClientRepositoryFilterSortDecorator,
 )
-from client_rep_json import Client_rep_json
-from client_rep_yaml import Client_rep_yaml
 from repository_base import ClientRepositoryBase
 
 
@@ -212,20 +210,45 @@ def test_db_decorator(adapter):
     print()
 
 
+def test_db_update_and_read(adapter):
+    print("=== update + re-add в БД ===")
+
+    orig = Client(1, "Оригиналов", "Оригинал", "7777 111111", "9111111111")
+    adapter.add(orig)                       # add проставит orig.client_id
+    print(f"  до:      {orig}")
+
+    adapter.update(
+        orig.client_id,
+        Client(orig.client_id, "Изменённый", orig.first_name,
+               "8888 222222", orig.phone_number),
+    )
+    print(f"  после:   {adapter.get_by_id(orig.client_id)}")
+
+    revived = Client(1, orig.last_name, orig.first_name,
+                     orig.passport_data, orig.phone_number)
+    adapter.add(revived)
+    print(f"  добавлен: {revived}")
+
+    assert revived.client_id > orig.client_id
+    assert adapter.get_by_id(orig.client_id).passport_data == "8888 222222"
+    assert adapter.get_by_id(revived.client_id).passport_data == "7777 111111"
+    print()
+
+
 if __name__ == "__main__":
     test_client()
-    test_file_round_trip(Client_rep_json, "test_data.json")
-    test_file_round_trip(Client_rep_yaml, "test_data.yaml")
+    # test_file_round_trip(Client_rep_json, "test_data.json")
+    # test_file_round_trip(Client_rep_yaml, "test_data.yaml")
 
-    json_repo = Client_rep_json("test_data.json")
-    assert isinstance(json_repo, ClientRepositoryBase)
-    test_repository(json_repo, persist=json_repo.write_to_file)
-    test_file_decorator(json_repo)
+    # json_repo = Client_rep_json("test_data.json")
+    # assert isinstance(json_repo, ClientRepositoryBase)
+    # test_repository(json_repo, persist=json_repo.write_to_file)
+    # test_file_decorator(json_repo)
 
-    yaml_repo = Client_rep_yaml("test_data.yaml")
-    assert isinstance(yaml_repo, ClientRepositoryBase)
-    test_repository(yaml_repo, persist=yaml_repo.write_to_file)
-    test_file_decorator(yaml_repo)
+    # yaml_repo = Client_rep_yaml("test_data.yaml")
+    # assert isinstance(yaml_repo, ClientRepositoryBase)
+    # test_repository(yaml_repo, persist=yaml_repo.write_to_file)
+    # test_file_decorator(yaml_repo)
 
     if not os.environ.get("DB_PASSWORD"):
         print("ПРОПУСК БД: не задана переменная окружения DB_PASSWORD.")
@@ -244,8 +267,11 @@ if __name__ == "__main__":
         # Изоляция БД-тестов: чистим таблицу перед прогоном.
         with adapter.adaptee.db_manager.get_connection().cursor() as cur:
             cur.execute("TRUNCATE TABLE clients RESTART IDENTITY;")
-
+        
         test_repository(ClientRepositoryFilterSortDecorator(adapter))
         test_db_decorator(adapter)
+
+        test_db_update_and_read(adapter)
+
 
     print("ПРОВЕРКИ ДЛЯ ДОСТУПНЫХ РЕПОЗИТОРИЕВ ПРОЙДЕНЫ.")

@@ -47,7 +47,6 @@ class ClientRepositoryBase(ABC):
 
 
 class ClientRepositoryInMemory(ClientRepositoryBase):
-    """CRUD над списком клиентов в памяти."""
 
     def __init__(self):
         self.clients: list[Client] = []
